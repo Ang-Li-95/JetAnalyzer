@@ -17,13 +17,19 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T15', '')
 
+process.load("SimTracker.TrackerHitAssociation.tpClusterProducer_cfi")
+process.load("SimTracker.TrackAssociatorProducers.quickTrackAssociatorByHits_cfi")
+process.load('SimTracker.TrackAssociation.trackingParticleRecoTrackAsssociation_cfi')
+
 process.JetAnalyzer = cms.EDAnalyzer('JetAnalyzer',
-                                     genjets = cms.untracked.InputTag("ak4GenJets"),
+                                     tracks = cms.untracked.InputTag("generalTracks"),
+                                     rectosim = cms.untracked.InputTag("trackingParticleRecoTrackAsssociation"),
                                     )
 
 process.TFileService = cms.Service("TFileService", fileName = cms.string("JetTree.root") )
 
 process.runseq = cms.Sequence()
+#process.runseq += process.tpClusterProducer + process.quickTrackAssociatorByHits + process.trackingParticleRecoTrackAsssociation
 process.runseq += process.JetAnalyzer
 process.path = cms.Path(process.runseq)
 process.schedule = cms.Schedule(process.path)

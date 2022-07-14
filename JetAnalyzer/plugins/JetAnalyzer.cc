@@ -9,7 +9,7 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
-#include "DataFormats/JetReco/interface/GenJetCollection.h"
+#include "DataFormats/RecoCandidate/interface/TrackAssociation.h"
 #include "TTree.h"
 
 struct eventInfo
@@ -33,11 +33,13 @@ private:
   TTree *eventTree;
   eventInfo *evInfo;
 
-  edm::EDGetTokenT<reco::GenJetCollection> GenJetToken_;
+  edm::EDGetTokenT<edm::View<reco::Track>> TrackToken_;
+  edm::EDGetTokenT<reco::RecoToSimCollection> rectosimToken_;
 };
 
 JetAnalyzer::JetAnalyzer(const edm::ParameterSet& iConfig)
-    : GenJetToken_(consumes< reco::GenJetCollection >(iConfig.getUntrackedParameter<edm::InputTag>("genjets"))) 
+    : TrackToken_(consumes< edm::View<reco::Track> >(iConfig.getUntrackedParameter<edm::InputTag>("tracks"))),
+      rectosimToken_(consumes<reco::RecoToSimCollection>(iConfig.getUntrackedParameter<edm::InputTag>("rectosim")))
 {
   evInfo = new eventInfo;
 }
@@ -52,18 +54,27 @@ void JetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
   std::cout << "Processing event: " << iEvent.id().event() << std::endl;
   evInfo->evt = iEvent.id().event();
 
-  edm::Handle<reco::GenJetCollection> genjets;
-  iEvent.getByToken(GenJetToken_, genjets);
+  edm::Handle<reco::RecoToSimCollection > rectosimCollection;
+  iEvent.getByToken(rectosimToken_,rectosimCollection);
+  //iEvent.getByLabel("trackingParticleRecoTrackAsssociation", rectosimCollection);
+  auto& recSimColl = *(rectosimCollection.product());
 
-  // loop over all GenJets
-  for (const auto& jet : (*genjets)){
-    double pt = jet.pt();
-    double eta = jet.eta();
-    double phi = jet.phi();
-    std::cout << "  GenJet pT: " << pt << " eta: " << eta << " phi: " << phi << std::endl;
-    evInfo->jet_pt.push_back(pt);
-    evInfo->jet_eta.push_back(eta);
-    evInfo->jet_phi.push_back(phi);
+  edm::Handle<edm::View<reco::Track>> trackCollectionH;
+  iEvent.getByToken(TrackToken_, trackCollectionH);
+  const edm::View<reco::Track>& trackCollection = *(trackCollectionH.product());
+
+  //edm::View<reco::Track>::size_type&
+  for(edm::View<reco::Track>::size_type i=0; i<trackCollection.size(); ++i){
+    edm::RefToBase<reco::Track> track(trackCollectionH, i);
+    std::vector<std::pair<TrackingParticleRef, double> > tp;
+    if(recSimColl.find(track) != recSimColl.end()){
+      tp = recSimColl[track];
+      if (tp.size()!=0) {
+              TrackingParticleRef tpr = tp.begin()->first;
+              double associationQuality = tp.begin()->second;
+              std::cout << "asso. particle " << tpr->pdgId() << " with quality " << associationQuality << std::endl;
+          }
+    }
   }
 
   eventTree->Fill();
