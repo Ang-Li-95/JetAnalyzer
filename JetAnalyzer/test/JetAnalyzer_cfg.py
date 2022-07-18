@@ -23,6 +23,9 @@ process.load('SimTracker.TrackAssociation.trackingParticleRecoTrackAsssociation_
 
 process.JetAnalyzer = cms.EDAnalyzer('JetAnalyzer',
                                      tracks = cms.untracked.InputTag("generalTracks"),
+                                     mtdtracks = cms.untracked.InputTag("trackExtenderWithMTD"),
+                                     TrackAssoc = cms.untracked.InputTag("trackExtenderWithMTD:generalTrackassoc"),
+                                     tmtd = cms.untracked.InputTag("trackExtenderWithMTD:generalTracktmtd"),
                                      rectosim = cms.untracked.InputTag("trackingParticleRecoTrackAsssociation"),
                                     )
 
